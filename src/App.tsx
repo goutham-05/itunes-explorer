@@ -246,7 +246,6 @@ function App() {
                       ]}
                       customProgressBarSection={[
                         RHAP_UI.PROGRESS_BAR,
-                        RHAP_UI.CURRENT_TIME,
                         RHAP_UI.DURATION
                       ]}
                       layout="stacked-reverse"
