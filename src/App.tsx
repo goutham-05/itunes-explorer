@@ -1,11 +1,10 @@
-import React, { useEffect, useState, useMemo, useCallback } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import debounce from "lodash/debounce";
 import AudioPlayer, { RHAP_UI } from "react-h5-audio-player";
 import "react-h5-audio-player/lib/styles.css";
 import { FaMusic, FaSearch } from "react-icons/fa";
 import {
   AppBar,
-  Box,
   Card,
   CardContent,
   CardMedia,
@@ -16,7 +15,8 @@ import {
   Typography,
   Button,
   CssBaseline,
-  Skeleton
+  Skeleton,
+  Box
 } from "@mui/material";
 
 interface ItunesResult {
@@ -32,39 +32,23 @@ interface CustomInputProps {
   onDebouncedChange: (value: string) => void;
 }
 
-const gridLayout = {
-  xs: "1fr",
-  sm: "repeat(2, 1fr)",
-  md: "repeat(3, 1fr)",
-  lg: "repeat(4, 1fr)",
-  xl: "repeat(5, 1fr)"
-};
-
 const CustomInput: React.FC<CustomInputProps> = ({
   value,
   onDebouncedChange
 }) => {
   const [inputValue, setInputValue] = useState(value);
-
   const debouncedSearch = useMemo(
-    () => debounce((value: string) => onDebouncedChange(value), 1000),
+    () => debounce(onDebouncedChange, 1000),
     [onDebouncedChange]
   );
 
-  useEffect(() => {
-    return () => {
-      debouncedSearch.cancel();
-    };
-  }, [debouncedSearch]);
+  useEffect(() => () => debouncedSearch.cancel(), [debouncedSearch]);
 
-  const handleChange = useCallback(
-    (event: React.ChangeEvent<HTMLInputElement>) => {
-      const newValue = event.target.value;
-      setInputValue(newValue);
-      debouncedSearch(newValue);
-    },
-    [debouncedSearch]
-  );
+  const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const newValue = event.target.value;
+    setInputValue(newValue);
+    debouncedSearch(newValue);
+  };
 
   return (
     <TextField
@@ -73,7 +57,7 @@ const CustomInput: React.FC<CustomInputProps> = ({
       variant="outlined"
       placeholder="Search iTunes"
       fullWidth
-      sx={{ maxWidth: 800, width: "100%", mx: "auto", mb: 4 }}
+      sx={{ maxWidth: 800, mb: 4 }}
       InputProps={{
         startAdornment: (
           <InputAdornment position="start">
@@ -96,20 +80,13 @@ const useFetch = <T,>(url: string) => {
       setError(null);
       try {
         const response = await fetch(url);
-        if (response.status === 404) {
-          setData([] as unknown as T);
-          return;
-        }
-        if (!response.ok) {
+        if (!response.ok)
           throw new Error(`HTTP error! status: ${response.status}`);
-        }
         const result = await response.json();
-        setTimeout(() => {
-          setData(result);
-          setLoading(false);
-        }, 1000);
+        setData(result);
       } catch (e) {
         setError(e instanceof Error ? e : new Error("An error occurred"));
+      } finally {
         setLoading(false);
       }
     };
@@ -121,25 +98,14 @@ const useFetch = <T,>(url: string) => {
 
 function App() {
   const [searchTerm, setSearchTerm] = useState("pop");
-  const [queryTerm, setQueryTerm] = useState("pop");
 
   const {
     data: itunesResults,
     loading: itunesLoading,
     error: itunesError
   } = useFetch<{ results: ItunesResult[] }>(
-    `https://itunes.apple.com/search?term=${queryTerm || "pop"}`
+    `https://itunes.apple.com/search?term=${searchTerm || "pop"}`
   );
-
-  const handleSearchChange = (value: string) => {
-    setSearchTerm(value);
-    setQueryTerm(value || "pop");
-  };
-
-  const handleReset = () => {
-    setSearchTerm("pop");
-    setQueryTerm("pop");
-  };
 
   return (
     <>
@@ -175,153 +141,120 @@ function App() {
             px: 2,
             display: "flex",
             flexDirection: "column",
-            alignItems: "center",
-            width: "100%"
+            alignItems: "center"
           }}
         >
-          <Box
-            sx={{
-              display: "flex",
-              justifyContent: "center",
-              alignItems: "center",
-              width: "100%",
-              maxWidth: 800,
-              mb: 2
-            }}
-          >
-            <CustomInput
-              value={searchTerm}
-              onDebouncedChange={handleSearchChange}
-            />
-          </Box>
-          <Typography
-            variant="h5"
-            sx={{
-              textAlign: "center",
-              fontWeight: "bold",
-              mt: 2,
-              mb: 3
-            }}
-          >
+          <CustomInput value={searchTerm} onDebouncedChange={setSearchTerm} />
+          <Typography variant="h5" sx={{ fontWeight: "bold", mb: 3 }}>
             Search Results
           </Typography>
           <Box
-            sx={{
-              flexGrow: 1,
-              width: "100%",
-              maxWidth: "1600px",
-              padding: 2
-            }}
+            display="grid"
+            gridTemplateColumns="repeat(auto-fill, minmax(250px, 1fr))"
+            gap={3}
+            sx={{ width: "100%", maxWidth: 1600 }}
           >
-            <Box display="grid" gridTemplateColumns={gridLayout} gap={3}>
-              {itunesLoading ? (
-                [...Array(10)].map((_, index) => (
-                  <Card key={index} sx={{ borderRadius: 2, boxShadow: 3 }}>
+            {itunesLoading ? (
+              Array.from({ length: 10 }).map((_, index) => (
+                <Card key={index} sx={{ borderRadius: 2, boxShadow: 3 }}>
+                  <Skeleton
+                    variant="rectangular"
+                    height={200}
+                    animation="wave"
+                    sx={{ borderRadius: "8px 8px 0 0" }}
+                  />
+                  <CardContent>
+                    <Skeleton
+                      variant="text"
+                      width="80%"
+                      height={24}
+                      animation="wave"
+                      sx={{ mb: 1 }}
+                    />
+                    <Skeleton
+                      variant="text"
+                      width="60%"
+                      height={20}
+                      animation="wave"
+                      sx={{ mb: 2 }}
+                    />
                     <Skeleton
                       variant="rectangular"
-                      height={200}
+                      height={54}
+                      width="100%"
                       animation="wave"
-                      sx={{ borderRadius: "8px 8px 0 0" }}
+                      sx={{ borderRadius: 1 }}
                     />
-                    <CardContent>
-                      <Skeleton
-                        variant="text"
-                        width="80%"
-                        height={24}
-                        animation="wave"
-                        sx={{ mb: 1 }}
-                      />
-                      <Skeleton
-                        variant="text"
-                        width="60%"
-                        height={20}
-                        animation="wave"
-                        sx={{ mb: 2 }}
-                      />
-                      <Skeleton
-                        variant="rectangular"
-                        height={54}
-                        width="100%"
-                        animation="wave"
-                        sx={{ borderRadius: 1 }}
-                      />
-                    </CardContent>
-                  </Card>
-                ))
-              ) : itunesError ? (
-                <Box gridColumn="1 / -1" textAlign="center">
-                  <Typography color="error">
-                    Error: {itunesError.message}
-                  </Typography>
-                </Box>
-              ) : itunesResults?.results.length === 0 ? (
-                <Box gridColumn="1 / -1" textAlign="center">
-                  <Typography variant="h6" color="textSecondary">
-                    No results found
-                  </Typography>
-                  <Button
-                    variant="contained"
-                    color="success"
-                    onClick={handleReset}
-                    sx={{ mt: 2 }}
-                  >
-                    Reset Search
-                  </Button>
-                </Box>
-              ) : (
-                itunesResults?.results.map((track) => (
-                  <Card
-                    key={track.trackId}
+                  </CardContent>
+                </Card>
+              ))
+            ) : itunesError ? (
+              <Typography color="error" align="center">
+                Error: {itunesError.message}
+              </Typography>
+            ) : itunesResults?.results.length === 0 ? (
+              <Typography variant="h6" color="textSecondary" align="center">
+                No results found
+                <Button
+                  variant="contained"
+                  color="success"
+                  onClick={() => setSearchTerm("pop")}
+                  sx={{ mt: 2 }}
+                >
+                  Reset Search
+                </Button>
+              </Typography>
+            ) : (
+              itunesResults?.results.map((track) => (
+                <Card
+                  key={track.trackId}
+                  sx={{
+                    borderRadius: 2,
+                    boxShadow: 3,
+                    display: "flex",
+                    flexDirection: "column",
+                    height: "100%",
+                    transition: "transform 0.2s",
+                    "&:hover": { transform: "scale(1.03)" }
+                  }}
+                >
+                  <CardMedia
+                    component="img"
+                    image={track.artworkUrl100.replace("100x100", "300x300")}
+                    alt={track.trackName}
+                    sx={{ height: 200, borderRadius: "8px 8px 0 0" }}
+                  />
+                  <CardContent
                     sx={{
-                      borderRadius: 2,
-                      boxShadow: 3,
+                      flexGrow: 1,
                       display: "flex",
-                      flexDirection: "column",
-                      height: "100%",
-                      transition: "transform 0.2s",
-                      "&:hover": { transform: "scale(1.03)" }
+                      flexDirection: "column"
                     }}
                   >
-                    <CardMedia
-                      component="img"
-                      image={track.artworkUrl100.replace("100x100", "300x300")}
-                      alt={track.trackName}
-                      sx={{ height: 200, borderRadius: "8px 8px 0 0" }}
+                    <Typography variant="h6" gutterBottom noWrap>
+                      {track.trackName}
+                    </Typography>
+                    <Typography variant="body2" color="textSecondary" noWrap>
+                      {track.artistName}
+                    </Typography>
+                    <AudioPlayer
+                      src={track.previewUrl}
+                      className="audio-player"
+                      customControlsSection={[
+                        RHAP_UI.MAIN_CONTROLS,
+                        RHAP_UI.VOLUME_CONTROLS
+                      ]}
+                      customProgressBarSection={[
+                        RHAP_UI.PROGRESS_BAR,
+                        RHAP_UI.CURRENT_TIME,
+                        RHAP_UI.DURATION
+                      ]}
+                      layout="stacked-reverse"
                     />
-                    <CardContent
-                      sx={{
-                        flexGrow: 1,
-                        display: "flex",
-                        flexDirection: "column"
-                      }}
-                    >
-                      <Typography variant="h6" gutterBottom noWrap>
-                        {track.trackName}
-                      </Typography>
-                      <Typography variant="body2" color="textSecondary" noWrap>
-                        {track.artistName}
-                      </Typography>
-                      <Box mt={2} sx={{ marginTop: "auto" }}>
-                        <AudioPlayer
-                          src={track.previewUrl}
-                          className="audio-player"
-                          customControlsSection={[
-                            RHAP_UI.MAIN_CONTROLS,
-                            RHAP_UI.VOLUME_CONTROLS
-                          ]}
-                          customProgressBarSection={[
-                            RHAP_UI.PROGRESS_BAR,
-                            RHAP_UI.CURRENT_TIME,
-                            RHAP_UI.DURATION
-                          ]}
-                          layout="stacked-reverse"
-                        />
-                      </Box>
-                    </CardContent>
-                  </Card>
-                ))
-              )}
-            </Box>
+                  </CardContent>
+                </Card>
+              ))
+            )}
           </Box>
         </Box>
       </Box>
