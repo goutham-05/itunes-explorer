@@ -120,8 +120,7 @@ const ResultCard: React.FC<{ track: ItunesResult }> = ({ track }) => (
         customControlsSection={[RHAP_UI.MAIN_CONTROLS, RHAP_UI.VOLUME_CONTROLS]}
         customProgressBarSection={[
           RHAP_UI.PROGRESS_BAR,
-          RHAP_UI.CURRENT_TIME,
-          RHAP_UI.DURATION
+          RHAP_UI.CURRENT_LEFT_TIME
         ]}
         layout="stacked-reverse"
       />
